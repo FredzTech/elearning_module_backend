@@ -1,9 +1,10 @@
 const express = require("express");
 const app = express();
-const mongoose = require("mongoose"); //importing mongoose
+const mongoose = require("mongoose").mongoose; //importing mongoose
 app.use(express.json());
 const cors = require("cors");
 app.use(cors());
+const zxcvbn = require('zxcvbn');
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -32,6 +33,11 @@ require("./userDetails");
 const User = mongoose.model("UserInfo");
 app.post("/register", async(req, res) => {
     const { name, email, password, role } = req.body;
+    const strength = zxcvbn(password);
+    if (strength.score < 3) {
+        return res.status(400).send({ error: 'password is too weak' });
+        console.log(error);
+    }
     const encryptedPassword = await bcrypt.hash(password, 10); //encrypting the password
     try {
         const oldUser = await User.findOne({ email });
@@ -63,18 +69,22 @@ app.post("/login", async(req, res) => {
         return res.json({ error: "User Not found" });
     }
     if (await bcrypt.compare(password, user.password)) {
-        const token = jwt.sign({ email: user.email }, JWT_SECRET, {
-            expiresIn: 10,
-        });
+        const token = jwt.sign({ email: user.email }, JWT_SECRET
+
+            // token expire 
+            //     , {
+            //     expiresIn: 20,
+            // }
+        );
 
         if (res.status(201)) {
             return res.json({ status: "ok", data: token });
-            console.log(token)
-        } else {
-            return res.json({ error: "error" });
+
         }
+        return res.json({ error: "error" });
+
     }
-    res.json({ status: "error", error: "InvAlid Password" });
+    res.json({ status: "error", error: "Invalid email or password" });
 });
 
 app.post("/userData", async(req, res) => {
@@ -86,7 +96,7 @@ app.post("/userData", async(req, res) => {
             }
             return res;
         });
-        console.log(user);
+
         if (user == "token expired") {
             return res.send({ status: "error", data: "token expired" });
         }
@@ -101,6 +111,25 @@ app.post("/userData", async(req, res) => {
             });
     } catch (error) {}
 });
+// get users from the database
+// const collection = mongoose.db("test").collection("UserInfo");
+var database
+app.get('/users', (err, res) => {
+
+    User.find((err, result) => {
+        if (err) throw err
+        res.send(result)
+
+    });
+
+    // .then((users) => res.json(users))
+    //     .catch((error) => {
+    //         throw error
+    //     })
+
+
+
+})
 
 app.listen(5000, () => {
     console.log("server running at port 5000")
