@@ -36,7 +36,7 @@ app.post("/register", async(req, res) => {
     const strength = zxcvbn(password);
     if (strength.score < 3) {
         return res.status(400).send({ error: 'password is too weak' });
-        console.log(error);
+
     }
     const encryptedPassword = await bcrypt.hash(password, 10); //encrypting the password
     try {
@@ -69,13 +69,8 @@ app.post("/login", async(req, res) => {
         return res.json({ error: "User Not found" });
     }
     if (await bcrypt.compare(password, user.password)) {
-        const token = jwt.sign({ email: user.email }, JWT_SECRET
-
-            // token expire 
-            //     , {
-            //     expiresIn: 20,
-            // }
-        );
+        const options = { expiresIn: '1h' };
+        const token = jwt.sign({ email: user.email }, JWT_SECRET, options);
 
         if (res.status(201)) {
             return res.json({ status: "ok", data: token });
@@ -83,10 +78,24 @@ app.post("/login", async(req, res) => {
         }
         return res.json({ error: "error" });
 
+    } else {
+        res.status(401).json({ error: "Invalid email or password" });
     }
-    res.json({ status: "error", error: "Invalid email or password" });
+
 });
 
+
+// app.get('/secure', (req, res) => {
+//     // Get the JWT from the request headers
+//     const token = req.headers.authorization;
+//     // Verify the JWT using the secret
+//     try {
+//         const decoded = jwt.verify(token, JWT_Secret);
+//         res.json({ message: 'Authenticated', user: decoded.email });
+//     } catch (err) {
+//         res.status(401).json({ message: 'Unauthorized' });
+//     }
+// });
 app.post("/userData", async(req, res) => {
     const { token } = req.body;
     try {
@@ -98,6 +107,7 @@ app.post("/userData", async(req, res) => {
         });
 
         if (user == "token expired") {
+
             return res.send({ status: "error", data: "token expired" });
         }
 
@@ -109,23 +119,21 @@ app.post("/userData", async(req, res) => {
             .catch((error) => {
                 res.send({ status: "error", data: error });
             });
-    } catch (error) {}
+    } catch (error) {
+        res.status(401).json({ error: 'Unauthorized' })
+    }
 });
 // get users from the database
-// const collection = mongoose.db("test").collection("UserInfo");
-var database
-app.get('/users', (err, res) => {
+
+app.get('/users', (error, res) => {
 
     User.find((err, result) => {
-        if (err) throw err
+        if (err) { res.send(err) }
         res.send(result)
 
     });
 
-    // .then((users) => res.json(users))
-    //     .catch((error) => {
-    //         throw error
-    //     })
+
 
 
 
